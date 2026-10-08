@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
@@ -14,6 +14,7 @@ const documentRoutes = require('./routes/documentRoutes');
 const vaccinationRoutes = require('./routes/vaccinationRoutes');
 const qrRoutes = require('./routes/qrRoutes');
 const hospitalRoutes = require('./routes/hospitalRoutes');
+const providerRoutes = require('./routes/providerRoutes');
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -23,6 +24,7 @@ app.use('/api/documents', documentRoutes);
 app.use('/api/vaccinations', vaccinationRoutes);
 app.use('/api/qr', qrRoutes);
 app.use('/api/hospitals', hospitalRoutes);
+app.use('/api/provider', providerRoutes);
 
 app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok', message: 'Backend is running' });
