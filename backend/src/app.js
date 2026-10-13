@@ -26,8 +26,20 @@ app.use('/api/qr', qrRoutes);
 app.use('/api/hospitals', hospitalRoutes);
 app.use('/api/provider', providerRoutes);
 
+// Health check (no auth required)
 app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok', message: 'Backend is running' });
+});
+
+// DB health check (no auth required - for diagnostics)
+app.get('/api/db-health', async (req, res) => {
+    try {
+        const pool = require('./config/database');
+        await pool.query('SELECT 1');
+        res.status(200).json({ status: 'ok', message: 'Database connected' });
+    } catch (error) {
+        res.status(500).json({ status: 'error', message: error.message });
+    }
 });
 
 module.exports = app;

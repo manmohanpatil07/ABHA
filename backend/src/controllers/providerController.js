@@ -42,26 +42,22 @@ const scanPatientQR = async (req, res) => {
 
         const qrRecord = records[0];
 
-        // Validate expiration
         const now = new Date();
         const expiresAt = new Date(qrRecord.expires_at);
         if (now > expiresAt) {
             return res.status(403).json({ success: false, message: 'QR code has expired' });
         }
 
-        // Validate provider if restricted
         if (qrRecord.provider_id && qrRecord.provider_id !== providerId) {
             return res.status(403).json({ success: false, message: 'QR code is not authorized for this provider' });
         }
 
-        // Validate permission
         if (qrRecord.permission !== 'view') {
             return res.status(403).json({ success: false, message: 'Invalid permission level' });
         }
 
-        // Return successful authorization context
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             message: 'QR code verified successfully',
             user_id: qrRecord.user_id,
             access_id: qrRecord.access_id
@@ -82,7 +78,7 @@ const getAuthorizedPatientDetails = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Missing userId or accessId' });
         }
 
-        // 1. Re-verify the authorization via qr_access
+        // Re-verify the authorization
         const [accessRecords] = await pool.query(
             `SELECT * FROM qr_access WHERE access_id = ? AND user_id = ?`,
             [accessId, userId]
@@ -93,16 +89,16 @@ const getAuthorizedPatientDetails = async (req, res) => {
         }
 
         const access = accessRecords[0];
-        
+
         if (new Date() > new Date(access.expires_at)) {
             return res.status(403).json({ success: false, message: 'Access has expired' });
         }
-        
+
         if (access.provider_id && access.provider_id !== providerId) {
             return res.status(403).json({ success: false, message: 'Access denied for this provider' });
         }
 
-        // 2. Fetch patient details safely
+        // Fetch patient details - never return password_hash
         const [users] = await pool.query(
             `SELECT user_id, full_name, mobile, email, date_of_birth, gender, city, state, blood_group, emergency_contact
              FROM users WHERE user_id = ?`,
@@ -113,23 +109,23 @@ const getAuthorizedPatientDetails = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Patient not found' });
         }
 
-        // 3. Fetch health records
+        // Fetch health records
         const [healthRecords] = await pool.query(
             `SELECT record_id, record_type, title, description, record_date, created_at
              FROM health_records WHERE user_id = ? ORDER BY record_date DESC`,
             [userId]
         );
 
-        // 4. Fetch documents
+        // Fetch documents - use uploaded_at (matches schema.sql)
         const [documents] = await pool.query(
-            `SELECT document_id, document_type, document_name, file_url, created_at
-             FROM documents WHERE user_id = ? ORDER BY created_at DESC`,
+            `SELECT document_id, document_type, document_name, file_url, uploaded_at
+             FROM documents WHERE user_id = ? ORDER BY uploaded_at DESC`,
             [userId]
         );
 
-        // 5. Fetch vaccinations
+        // Fetch vaccinations
         const [vaccinations] = await pool.query(
-            `SELECT vaccination_id, vaccine_name, vaccination_date, next_due_date, notes
+            `SELECT vaccination_id, vaccine_name, vaccination_date, next_due_date, notes, created_at
              FROM vaccinations WHERE user_id = ? ORDER BY vaccination_date DESC`,
             [userId]
         );
